@@ -1,0 +1,161 @@
+// @ts-check
+// Note: type annotations allow type checking and IDEs autocompletion
+
+const lightCodeTheme = require('prism-react-renderer/themes/github');
+const darkCodeTheme = require('prism-react-renderer/themes/dracula');
+
+/** @type {import('@docusaurus/types').Config} */
+const config = {
+  title: 'khulnasoft',
+  tagline: 'Declarative CLI Version Manager. Unify tool versions in teams, projects, and CI. Easy, painless, and secure.',
+  url: 'https://khulnasoftproj.github.io',
+  baseUrl: '/',
+  onBrokenLinks: 'throw',
+  onBrokenMarkdownLinks: 'warn',
+  favicon: 'https://raw.githubusercontent.com/khulnasoftproj/khulnasoft/main/logo/khulnasoft_without_text.svg',
+  organizationName: 'khulnasoftproj', // Usually your GitHub org/user name.
+  projectName: 'khulnasoft', // Usually your repo name.
+
+  presets: [
+    [
+      '@docusaurus/preset-classic',
+      /** @type {import('@docusaurus/preset-classic').Options} */
+      ({
+        docs: {
+          sidebarPath: require.resolve('./sidebars.js'),
+          // Please change this to your repo.
+          editUrl: 'https://github.com/khulnasoftproj/khulnasoftproj.github.io/edit/main',
+        },
+        theme: {
+          customCss: require.resolve('./src/css/custom.css'),
+        },
+        blog: {
+          routeBasePath: '/blog',
+          feedOptions: {
+            type: 'all',
+            copyright: `Copyright © 2021 Shunsuke Suzuki. Built with Docusaurus.`,
+          },
+        },
+      }),
+    ],
+  ],
+
+  themeConfig:
+    /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
+    ({
+      announcementBar: {
+        id: 'cargo_package',
+        content:
+          '<a href="/docs/reference/registry-config/cargo-package">khulnasoft v2.8.0 supports installing packages by cargo install (2023-05-21)</a>',
+        backgroundColor: '#7FFF00',
+        textColor: '#091E42',
+        isCloseable: true,
+      },
+      navbar: {
+        title: 'khulnasoft',
+        logo: {
+          alt: 'khulnasoft Logo',
+          src: 'https://raw.githubusercontent.com/khulnasoftproj/khulnasoft/main/logo/khulnasoft_without_text.svg',
+        },
+        items: [
+          {
+            type: 'doc',
+            docId: 'index',
+            position: 'left',
+            label: 'Docs',
+          },
+          {
+            href: 'https://github.com/orgs/khulnasoftproj/discussions',
+            label: 'Question',
+            position: 'right',
+          },
+          {
+            href: 'https://github.com/khulnasoftproj/khulnasoft',
+            label: 'GitHub',
+            position: 'right',
+          },
+        ],
+      },
+      footer: {
+        style: 'dark',
+        links: [
+          {
+            title: 'Docs',
+            items: [
+              {
+                label: 'Overview',
+                to: '/docs/',
+              },
+              {
+                to: '/docs/tutorial',
+                label: 'Tutorial',
+              },
+              {
+                to: '/docs/install',
+                label: 'Install',
+              },
+              {
+                to: '/docs/reference/slide-blog',
+                label: 'Blog',
+              },
+            ],
+          },
+          {
+            title: 'More',
+            items: [
+              {
+                href: 'https://github.com/orgs/khulnasoftproj/discussions',
+                label: 'Question',
+              },
+              {
+                label: 'GitHub',
+                href: 'https://github.com/khulnasoftproj/khulnasoft',
+              },
+              {
+                href: 'https://github.com/khulnasoftproj/khulnasoft-registry',
+                label: 'Standard Registry',
+              },
+              {
+                href: 'https://github.com/sponsors/khulnasoftproj',
+                label: 'Sponsor',
+              },
+              {
+                href: 'https://github.com/khulnasoftproj/khulnasoft/releases',
+                label: 'Changelog',
+              },
+              {
+                href: 'https://asciinema.org/a/498262?autoplay=1',
+                label: 'Demo',
+              },
+              {
+                label: 'Twitter',
+                href: 'https://twitter.com/khulnasoftclivm',
+              },
+            ],
+          },
+        ],
+        copyright: `Copyright © 2021 Shunsuke Suzuki. Built with Docusaurus.`,
+      },
+      prism: {
+        theme: lightCodeTheme,
+        darkTheme: darkCodeTheme,
+      },
+      algolia: {
+        appId: 'OBO5AZ814M',
+        // Public API key: it is safe to commit it
+        apiKey: '7ebd7217e9bd4836c5094b4acdf1a0c9',
+        indexName: 'khulnasoftproj',
+        // Optional: see doc section below
+        // contextualSearch: true,
+        // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
+        // externalUrlRegex: 'external\\.com|domain\\.com',
+
+        // Optional: Algolia search parameters
+        searchParameters: {},
+
+        //... other Algolia params
+      },
+    }),
+};
+
+module.exports = config;

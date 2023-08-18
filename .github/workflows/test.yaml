@@ -1,0 +1,152 @@
+---
+name: test
+
+on: pull_request
+
+permissions: {}
+env:
+  KHULNASOFT_POLICY_CONFIG: ${{ github.workspace }}/khulnasoft/policy.yaml
+  KHULNASOFT_LOG_COLOR: always
+
+jobs:
+  path-filter:
+    # Get changed files to filter jobs
+    outputs:
+      update-khulnasoft-checksums: ${{steps.changes.outputs.update-khulnasoft-checksums}}
+      renovate-config-validator: ${{steps.changes.outputs.renovate-config-validator}}
+      ghalint: ${{steps.changes.outputs.ghalint}}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - uses: dorny/paths-filter@V2.11.1 # v2.11.1
+        id: changes
+        with:
+          filters: |
+            update-khulnasoft-checksums:
+              - khulnasoft/khulnasoft.yaml
+              - khulnasoft/imports/*.yaml
+              - khulnasoft/khulnasoft-checksums.json
+              - .github/workflows/test.yaml
+            renovate-config-validator:
+              - renovate.json
+            ghalint:
+              - .github/workflows/*.yaml
+              - khulnasoft/imports/ghalint.yaml
+
+  enable-automerge:
+    # Enable automerge to merge pull requests from Renovate automatically.
+    runs-on: ubuntu-latest
+    needs:
+      - status-check
+    permissions:
+      contents: write # For enable automerge
+      pull-requests: write # For enable automerge
+    # "! failure() && ! cancelled()" is required. success() returns false if dependent jobs are skipped.
+    # https://github.com/community/community/discussions/45058
+    # By default success() is used so we have to override success() by "! failure() && ! cancelled()"
+    if: |
+      ! failure() && ! cancelled() && github.event.pull_request.user.login == 'renovate[bot]' && contains(github.event.pull_request.body, ' **Automerge**: Enabled.')
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@b62528385c34dbc9f38e5f4225ac829252d1ea92 # v1.8.0
+        with:
+          app_id: ${{secrets.APP_ID_KHULNASOFTPROJ_KHULNASOFT}}
+          private_key: ${{secrets.APP_PRIVATE_KEY_KHULNASOFTPROJ_KHULNASOFT}}
+      - run: gh -R "$GITHUB_REPOSITORY" pr merge --squash --auto --delete-branch "$PR_NUMBER"
+        env:
+          GITHUB_TOKEN: ${{steps.generate_token.outputs.token}} # Use GitHub App to trigger GitHub Actions Workflow by merge commit.
+          PR_NUMBER: ${{github.event.pull_request.number}}
+
+  status-check:
+    # This job is used for main branch's branch protection rule's status check.
+    # If all dependent jobs succeed or are skipped this job succeeds.
+    runs-on: ubuntu-latest
+    needs:
+      - renovate-config-validator
+      - test
+      - typos
+      - ghalint
+      - update-khulnasoft-checksums
+    permissions: {}
+    if: failure()
+    steps:
+      - run: exit 1
+
+  renovate-config-validator:
+    # Validate Renovate Configuration by renovate-config-validator.
+    uses: sulaiman-coder/renovate-config-validator-workflow/.github/workflows/validate.yaml@35f1c78014c423fd37eb792c73f11ec0898098f4 # v0.2.2
+    needs: path-filter
+    if: needs.path-filter.outputs.renovate-config-validator == 'true'
+    permissions:
+      contents: read
+
+  test:
+    uses: ./.github/workflows/deploy.yaml
+    permissions:
+      contents: write
+    with:
+      is_pr: true
+
+  update-khulnasoft-checksums:
+    # Update khulnasoft-checksums.json and push a commit
+    runs-on: ubuntu-latest
+    needs: path-filter
+    permissions: {}
+    if: |
+      needs.path-filter.outputs.update-khulnasoft-checksums == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@V3.5.3 # v3.5.3
+      - name: Generate token
+        id: generate_token
+        if: "! github.event.pull_request.head.repo.fork"
+        uses: tibdex/github-app-token@V1.8.0 # v1.8.0
+        with:
+          app_id: ${{secrets.APP_ID_KHULNASOFTPROJ_KHULNASOFT}}
+          private_key: ${{secrets.APP_PRIVATE_KEY_KHULNASOFTPROJ_KHULNASOFT}}
+      - uses: khulnasoftproj/khulnasoft-installer@V2.1.2 # v2.1.2
+        # Install ghcp
+        with:
+          khulnasoft_version: v2.10.1
+        env:
+          KHULNASOFT_GITHUB_TOKEN: ${{github.token}}
+      - uses: khulnasoftproj/update-checksum-action@V0.2.2 # v0.2.2
+        with:
+          prune: true
+          skip_push: ${{github.event.pull_request.head.repo.fork}}
+        env:
+          # To trigger GitHub Actions Workflow by pushing a commit, GitHub App token is required.
+          # github.token doesn't trigger GitHub Actions Workflow.
+          # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
+          # > When you use the repository's GITHUB_TOKEN to perform tasks, events triggered by the GITHUB_TOKEN, with the exception of workflow_dispatch and repository_dispatch, will not create a new workflow run.
+          GITHUB_TOKEN: ${{steps.generate_token.outputs.token}}
+
+  ghalint:
+    # Validate GitHub Actions Workflows by ghalint.
+    needs: path-filter
+    if: needs.path-filter.outputs.ghalint == 'true'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - uses: actions/checkout@V3 # v3.5.3
+      - uses: khulnasoftproj/khulnasoft-installer@V2.1.2 # v2.1.2
+        with:
+          khulnasoft_version: v2.10.1
+        env:
+          KHULNASOFT_GITHUB_TOKEN: ${{github.token}}
+      - run: ghalint run
+        env:
+          GHALINT_LOG_COLOR: always
+
+  typos:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - uses: actions/checkout@V3 # v3.5.3
+      - uses: khulnasoftproj/khulnasoft-installer@V2.1.2 # v2.1.2
+        with:
+          khulnasoft_version: v2.10.1
+        env:
+          KHULNASOFT_GITHUB_TOKEN: ${{github.token}}
+      - run: typos

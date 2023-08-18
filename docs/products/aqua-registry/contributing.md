@@ -1,0 +1,167 @@
+---
+sidebar_position: 100
+---
+
+# Contributing
+
+How to contribute to Standard Registry. https://github.com/khulnasoftproj/khulnasoft-registry
+
+## See also
+
+- :star: [OSS Contribution Guide](https://github.com/sulaiman-coder/oss-contribution-guide)
+- :star: [Registry Style Guide](https://khulnasoftproj.github.io/docs/develop-registry/registry-style-guide)
+- [Registry Configuration](/docs/reference/registry-config/)
+- [Change `GOOS` and `GOARCH` for testing](/docs/develop-registry/change-os-arch-for-test)
+
+## Should you create an Issue before sending a Pull Request?
+
+Basically, you don't have to create an Issue before sending a Pull Request.
+But if the pull request requires the discussion before reviewing, you have to create an Issue in advance.
+
+For example, you don't have to create an Issue in the following cases.
+
+- Add a package
+- Fix a typo
+
+On the other hand, for example if you want to change the directory structure in `pkgs` or the workflow adding a package,
+you have to create an Issue and describe what is changed and why the change is needed.
+
+## khulnasoft can't support some tools' plugin mechanism
+
+Some tools have the plugin mechanism.
+
+e.g.
+
+- [GitHub CLI Extension](https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions)
+- [Terraform provider](https://developer.hashicorp.com/terraform/language/providers)
+- [Gauge plugin](https://docs.gauge.org/plugin.html?os=macos&language=java&ide=null)
+- etc
+
+khulnasoft simply installs commands in PATH (`KHULNASOFT_ROOT_DIR/bin`), but some of these plugins expect to be installed in the other location.
+If khulnasoft can't support the plugin, we will reject the pull request adding the plugin to khulnasoft-registry.
+
+So if you send a pull request adding a plugin to khulnasoft-registry, please check if khulnasoft can support the plugin.
+We aren't necessarily familiar with the plugin, so please explain where the plugin expects to be installed and how the plugin works in the pull request description.
+
+If you don't know well, please create a pull request and consult us.
+
+## Requirements
+
+- [khulnasoft](https://khulnasoftproj.github.io/docs/install) >= [v1.14.0](https://github.com/khulnasoftproj/khulnasoft/releases/tag/v1.14.0)
+
+## Set up
+
+Checkout the repository and install [khulnasoft-registry CLI](https://github.com/khulnasoftproj/registry-tool).
+
+```console
+$ git clone https://github.com/khulnasoftproj/khulnasoft-registry
+$ cd khulnasoft-registry
+$ khulnasoft i -l # Install khulnasoft-registry CLI
+```
+
+## How to add packages
+
+1. Scaffold configuration: `khulnasoft-registry scaffold [--deep] <package name>`
+1. Fix generated files if the scaffold fails
+1. Update registry.yaml: `khulnasoft-registry gr`
+1. Test: `khulnasoft i` and run installed tools
+1. Repeat the step 2 ~ 4 until packages are installed properly
+1. Create a pull request: `khulnasoft-registry create-pr-new-pkg <package name>...`
+
+:::info
+If you face GitHub API rate limiting, please set the GitHub Access token with environment variable `GITHUB_TOKEN` or `KHULNASOFT_GITHUB_TOKEN`.
+
+e.g.
+
+```sh
+export GITHUB_TOKEN=<YOUR PERSONAL ACCESS TOKEN>
+```
+:::
+
+:::info
+When you update `pkgs/**/registry.yaml`, you have to run `khulnasoft-registry gr` to reflect the update to `registry.yaml` on the repository root directory.
+:::
+
+:::info
+`--deep` option requires `khulnasoft >= v1.34.0` and `registry-tool >= v0.1.8`.
+:::
+
+## Supported OS and CPU Architecture
+
+Please consider the following OS and CPU Architecture.
+
+- OS
+  - windows
+  - darwin
+  - linux
+- CPU Architecture
+  - amd64
+  - arm64
+
+We test the registry in CI on the above environments by GitHub Actions' build matrix.
+
+## Test multiple versions
+
+If the package has the field [version_overrides](/docs/reference/registry-config/version-overrides),
+please add not only the latest version but also old versions in `pkg.yaml` to test if old versions can be installed properly.
+
+e.g. [pkg.yaml](https://github.com/khulnasoftproj/khulnasoft-registry/blob/main/pkgs/scaleway/scaleway-cli/pkg.yaml) [registry.yaml](https://github.com/khulnasoftproj/khulnasoft-registry/blob/main/pkgs/scaleway/scaleway-cli/registry.yaml)
+
+```yaml
+packages:
+  - name: scaleway/scaleway-cli@v2.12.0
+  - name: scaleway/scaleway-cli
+    version: v2.4.0
+```
+
+:warning: Don't use the short syntax `<package name>@<version>` for the old version to prevent Renovate from updating the old version.
+
+:thumbsdown:
+
+```yaml
+packages:
+  - name: scaleway/scaleway-cli@v2.12.0
+  - name: scaleway/scaleway-cli@v2.12.0
+```
+
+## Test in your laptop with Eartly
+
+Using [Earthly](https://docs.earthly.dev/), you can do a test against a specific platform in your laptop.
+You can test quickly without pushing a commit and waiting for CI.
+Compared with running `khulnasoft i --test` in your laptop directly, you can keep your laptop clean and can test against other platform than your laptop.
+
+Please see [Earthfile](https://github.com/khulnasoftproj/khulnasoft-registry/blob/main/Earthfile) too.
+
+Please run `khulnasoft i -l` in this repository, then Earthly is installed by khulnasoft.
+
+After creating and updating a package's `pkg.yaml` and `registry.yaml`, please run `earthly +test`.
+
+```console
+$ earthly [-i] +test --pkg=<package name> [--os=linux|darwin|windows] [--arch=amd64|arm64]
+```
+
+e.g.
+
+```console
+$ earthly +test --pkg=sulaiman-coder/github-comment --os=windows --arch=amd64
+```
+
+There are three args.
+
+- `--pkg`: (Required): package name. e.g. `sulaiman-coder/tfcmt`
+- `--os`: (Default: `linux`): [KHULNASOFT_GOOS](/docs/develop-registry/change-os-arch-for-test)
+- `--arch`: (Default: `amd64`): [KHULNASOFT_GOARCH](/docs/develop-registry/change-os-arch-for-test)
+
+### Debug with earthly's `-i` option
+
+[earthly's `-i` option is useful for debug](https://docs.earthly.dev/best-practices#technique-use-earthly-i-to-debug-failures).
+
+https://docs.earthly.dev/docs/earthly-command
+
+You can install tools for debug in a container.
+
+e.g.
+
+```console
+$ apk add tree
+```
